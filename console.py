@@ -69,7 +69,7 @@ class HBNBCommand(cmd.Cmd):
             instance = eval(args[0])()
             instance.save()
             print(instance.id)
-        except:
+        except NameError:
             print("** class doesn't exist **")
             return
 
@@ -274,10 +274,10 @@ class HBNBCommand(cmd.Cmd):
                                     print(inp)
                                     self.do_update(inp)
                                 return
-                        except:
+                        except NameError:
                             Exception("*** Unknown syntax: {}".format(args))
                             return
-                    except:
+                    except NameError:
                         Exception("*** Unknown syntax: {}".format(args))
                         return
 
