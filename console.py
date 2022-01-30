@@ -10,6 +10,8 @@ from models.place import Place
 from models.review import Review
 from models.state import State
 from models import storage
+import shlex
+import re
 
 
 class HBNBCommand(cmd.Cmd):
@@ -26,10 +28,7 @@ class HBNBCommand(cmd.Cmd):
             "Review": Review}
 
     def do_quit(self, line):
-        """Exits the program
-        Args:
-            line - the user inputted string
-        """
+        "Quit command to exit the program"
 
         return True
 
@@ -46,6 +45,14 @@ class HBNBCommand(cmd.Cmd):
 
         print()
         return True
+
+    def find_class(self, the_class):
+        """ Return True if the class is found in the list """
+        list_class = ["BaseModel", "User", "Place",
+                      "State", "City", "Amenity", "Review"]
+        if the_class in list_class:
+            return True
+        return False
 
     def do_create(self, line):
         """Creates a new instance of BaseModel,
@@ -185,7 +192,95 @@ class HBNBCommand(cmd.Cmd):
                 key_list.append(v.__str__())
         print(key_list)
 
+    def do_count(self, line):
+        """Prints all string representation of all instances based or not
+        on the class name
+        Args:
+            line - user input
+        """
+        count = 0
+        key_list = []
+        instances = storage.all()
+        if len(line) == 0:
+            for v in instances.values():
+                count += 1
+            print(count)
+            return
+        line_list = line.split()
+        if line_list[0] not in self.classes:
+            print("** class doesn't exist **")
+            return
+        for v in instances.values():
+            if line_list[0] == v.__class__.__name__:
+                count += 1
+        print(count)
+
     def default(self, line):
+        """
+            Handles the case where the the command has no equivlaent
+            do_ method
+        """
+        do_braces_split = False
+        line_list = line.split(".")
+        check_class = self.find_class(line_list[0])
+        if check_class is True:
+            if line_list[1] == "all()":
+                return self.do_all(line_list[0])
+            elif line_list[1] == "count()":
+                return self.do_count(line_list[0])
+            function = line_list[1].replace(
+                "(", " ").replace(")", " ").replace(",", "")
+            func_args = shlex.split(function)
+            # concatenamos Class_name, espacio, id
+            classN_id = line_list[0] + " " + func_args[1]
+            if func_args[0] == "show":
+                return self.do_show(classN_id)
+
+            elif func_args[0] == "destroy":
+                return self.do_destroy(classN_id)
+
+            if func_args[0] == "update":
+                if "{" in line_list[1] and "}" in line_list[1]:
+                    do_braces_split = True
+                if do_braces_split is False:
+                    if "{" not in line_list[1] and "}" not in line_list[1]:
+                        classN_id_args = classN_id + " " + \
+                            "\"" + func_args[2] + "\"" + " " + \
+                            "\"" + func_args[3] + "\""
+                        print(classN_id_args)
+                        return self.do_update(classN_id_args)
+
+                elif do_braces_split:
+                    try:
+                        func = line_list[1].split("(")[0]
+                        idargs = re.compile(
+                            "\\(([^)]*)\\)").split(line_list[1])[1]
+                        dic_args = re.compile("\\{([^}]*)\\}").split(idargs)[1]
+                        dic_ = "{" + dic_args + "}"
+                        try:
+                            s = eval(dic_)
+                            if (type(s) is dict):
+                                dic_ = dic_args.replace(
+                                    ":", "").replace(",", "")
+                                dic_args = shlex.split(dic_)
+                                quo = "\""
+                                es = " "
+                                j = 0
+                                for i in range(int(len(dic_args) / 2)):
+                                    inp = classN_id + " " + quo + \
+                                        dic_args[j] + quo + " " + \
+                                        quo + dic_args[j+1] + quo
+                                    j = j + 2
+                                    print(inp)
+                                    self.do_update(inp)
+                                return
+                        except:
+                            Exception("*** Unknown syntax: {}".format(args))
+                            return
+                    except:
+                        Exception("*** Unknown syntax: {}".format(args))
+                        return
+
         print('default({})'.format(line))
         return cmd.Cmd.default(self, line)
 
